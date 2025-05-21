@@ -1,4 +1,4 @@
-# קובץ Main.py המעודכן עם שני מיקרופונים ותמיכה מקומית
+# קובץ Main.py המעודכן עם תמיכה מרובת שפות
 import os
 import time
 import threading
@@ -7,7 +7,7 @@ import random
 import cv2
 
 # ייבוא מודולים מקומיים
-from gonzo_stt import GonzoSTT
+from gonzo_stt_vosk import GonzoSTT
 from gonzo_tts import GonzoTTS
 from gonzo_face import GonzoFace
 from gonzo_serial import GonzoSerial
@@ -17,6 +17,9 @@ class GonzoAI:
         # טעינת קונפיגורציה
         self.config = self.load_config(config_file)
         
+        # הגדרת שפה מועדפת
+        self.language = self.config.get('language', 'en')  # ברירת מחדל: אנגלית
+        
         # איתחול מודולים
         self.initialize_modules()
         
@@ -25,21 +28,12 @@ class GonzoAI:
         self.command_mode = False
         
         # פקודות זמינות
-        self.available_commands = {
-            "light on": self.turn_light_on,
-            "turn on the light": self.turn_light_on,
-            "light off": self.turn_light_off,
-            "turn off the light": self.turn_light_off,
-            "hello": self.say_hello,
-            "who are you": self.introduce_yourself,
-            "stop": self.stop_system,
-            "goodbye": self.stop_system
-        }
+        self.initialize_commands()
     
     def load_config(self, config_file):
         """טעינת הגדרות מקובץ קונפיגורציה"""
         if os.path.exists(config_file):
-            with open(config_file, 'r') as f:
+            with open(config_file, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f)
         else:
             print(f"Warning: Config file {config_file} not found. Using default settings.")
@@ -74,6 +68,75 @@ class GonzoAI:
             except Exception as e:
                 print(f"Error initializing serial module: {e}")
     
+    def initialize_commands(self):
+        """אתחול המילון של הפקודות הזמינות על פי השפה"""
+        # מילון פקודות באנגלית
+        self.en_commands = {
+            "light on": self.turn_light_on,
+            "turn on the light": self.turn_light_on,
+            "lights on": self.turn_light_on,
+            "light off": self.turn_light_off,
+            "turn off the light": self.turn_light_off,
+            "lights off": self.turn_light_off,
+            "hello": self.say_hello,
+            "hi": self.say_hello,
+            "who are you": self.introduce_yourself,
+            "introduce yourself": self.introduce_yourself,
+            "what can you do": self.introduce_yourself,
+            "stop": self.stop_system,
+            "shutdown": self.stop_system,
+            "goodbye": self.stop_system,
+            "exit": self.stop_system
+        }
+        
+        # מילון פקודות בעברית
+        self.he_commands = {
+            "הדלק אור": self.turn_light_on,
+            "תדליק את האור": self.turn_light_on,
+            "אור": self.turn_light_on,
+            "כבה אור": self.turn_light_off,
+            "תכבה את האור": self.turn_light_off,
+            "שלום": self.say_hello,
+            "היי": self.say_hello,
+            "מי אתה": self.introduce_yourself,
+            "תציג את עצמך": self.introduce_yourself,
+            "מה אתה יודע לעשות": self.introduce_yourself,
+            "עצור": self.stop_system,
+            "כבה": self.stop_system,
+            "להתראות": self.stop_system,
+            "ביי": self.stop_system,
+            "צא": self.stop_system
+        }
+        
+        # בחירת מילון פקודות לפי שפה
+        self.available_commands = self.en_commands if self.language == 'en' else self.he_commands
+    
+    def get_response_text(self, key, default=None):
+        """קבלת טקסט תגובה לפי מפתח בשפה הנוכחית
+        
+        Args:
+            key (str): מפתח התגובה בקובץ הקונפיגורציה
+            default (str): ערך ברירת מחדל אם המפתח לא נמצא
+            
+        Returns:
+            str: טקסט התגובה
+        """
+        try:
+            responses = self.config.get('responses', {})
+            if key in responses:
+                if isinstance(responses[key], dict):
+                    # אם יש מילון תגובות לפי שפה
+                    if self.language in responses[key]:
+                        response = responses[key][self.language]
+                        if isinstance(response, list):
+                            return random.choice(response)
+                        return response
+                return responses[key]
+        except Exception as e:
+            print(f"Error getting response text: {e}")
+        
+        return default
+    
     def on_wake_word(self, response):
         """מטפל בזיהוי מילת ההפעלה"""
         print(f"Wake word detected, responding with: {response}")
@@ -84,11 +147,13 @@ class GonzoAI:
         # האזנה לפקודה
         print("Listening for command...")
         command = self.stt.recognize_command()
-        
         if command:
             self.process_command(command)
         else:
-            self.tts.speak("לא הבנתי את הפקודה, אנא נסה שוב.")
+            # הודעת שגיאה כאשר לא מזוהה פקודה
+            error_msg = self.get_response_text('command_not_understood', 
+                                               "I didn't understand that command, please try again.")
+            self.tts.speak(error_msg)
     
     def process_command(self, command_text):
         """עיבוד פקודה קולית"""
@@ -107,40 +172,46 @@ class GonzoAI:
             # שליחה לסיריאל אם הוגדר
             if self.serial:
                 self.serial.send_command(command_text)
-                self.tts.speak(f"שולח פקודה: {command_text}")
+                self.tts.speak(f"שולח פקודה: {command_text}" if self.language == 'he' else f"Sending command: {command_text}")
             else:
-                self.tts.speak("מצטער, אני לא מכיר את הפקודה הזו.")
+                error_msg = self.get_response_text('command_not_understood', 
+                                                  "I didn't understand that command, please try again.")
+                self.tts.speak(error_msg)
     
     def turn_light_on(self):
         """הדלקת אור"""
         if self.serial:
             self.serial.send_command("LIGHT_ON")
-        self.tts.speak("מדליק את האור.")
+        
+        response = self.get_response_text('light_on', "Turning on the light.")
+        self.tts.speak(response)
     
     def turn_light_off(self):
         """כיבוי אור"""
         if self.serial:
             self.serial.send_command("LIGHT_OFF")
-        self.tts.speak("מכבה את האור.")
+        
+        response = self.get_response_text('light_off', "Turning off the light.")
+        self.tts.speak(response)
     
     def say_hello(self):
         """אמירת שלום"""
-        greetings = [
-            "שלום לך!",
-            "היי, נעים להכיר.",
-            "שלום, איך אני יכול לעזור?",
-            "ברוך הבא, אני גונזו."
-        ]
+        greetings = self.get_response_text('greetings', ["Hello there!"])
+        if not isinstance(greetings, list):
+            greetings = [greetings]
+        
         self.tts.speak(random.choice(greetings))
     
     def introduce_yourself(self):
         """הצגה עצמית"""
-        intro = "שמי גונזו, אני מערכת בינה מלאכותית שנועדה לסייע לך. אני יכול להפעיל מכשירים, לזהות פנים, ולענות על שאלות."
+        intro = self.get_response_text('introduction', 
+                                      "My name is Gonzo, I'm an AI system designed to assist you.")
         self.tts.speak(intro)
     
     def stop_system(self):
         """עצירת המערכת"""
-        self.tts.speak("מכבה את המערכת. להתראות!")
+        response = self.get_response_text('system_shutdown', "Shutting down the system. Goodbye!")
+        self.tts.speak(response)
         self.running = False
     
     def start(self):
@@ -149,8 +220,12 @@ class GonzoAI:
         self.stt.start_listening()
         
         # התחלת לולאה ראשית
-        print("Gonzo AI system is running. Say 'gonzo' to activate.")
-        self.tts.speak("מערכת גונזו מוכנה. אמור 'גונזו' כדי להפעיל אותי.")
+        print(f"Gonzo AI system is running. Say '{self.config.get('wake_word', 'gonzo')}' to activate.")
+        
+        # הודעת פתיחה בשפה הנבחרת
+        ready_message = self.get_response_text('system_ready', 
+                                              "Gonzo AI system is ready. Say 'gonzo' to activate me.")
+        self.tts.speak(ready_message)
         
         try:
             # לולאה ראשית
@@ -177,7 +252,7 @@ class GonzoAI:
                 
                 # שינה קצרה כדי לא להעמיס על המעבד
                 time.sleep(0.1)
-                
+        
         except KeyboardInterrupt:
             print("\nStopping Gonzo AI...")
         finally:
@@ -186,7 +261,8 @@ class GonzoAI:
     def on_face_detected(self):
         """מגיב כאשר מזוהות פנים חדשות"""
         if self.config.get('greet_on_face_detection', False):
-            self.tts.speak("שלום! זיהיתי אותך.", block=False)
+            response = self.get_response_text('face_detected', "Hello! I've detected you.")
+            self.tts.speak(response, block=False)
     
     def cleanup(self):
         """ניקוי משאבים בסיום"""
