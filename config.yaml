@@ -1,34 +1,93 @@
-# קובץ config.yaml המעודכן
-# ===================================
+# קובץ config.yaml
+# =================================== 
 # Gonzo AI - קובץ קונפיגורציה
-# ===================================
+# =================================== 
 
-# === הגדרות כלליות ===
+# === הגדרות כלליות === 
 system_name: "Gonzo"
 language: "he"  # he = עברית, en = אנגלית
 wake_word: "gonzo"
+command_timeout: 10  # זמן המתנה לפקודה בשניות
 
-# === הגדרות שמע ===
-# אינדקסים של התקני השמע - 
+# === הגדרות שמע === 
+# אינדקסים של התקני שמע - 
 # הערך הנכון תלוי במערכת שלך, השתמש בפונקציה list_audio_devices() כדי למצוא
 device_index_listening: 0  # מיקרופון להאזנה למילת ההפעלה
 device_index_command: 0    # מיקרופון לפקודות (אפשר להשתמש באותו מיקרופון)
-tts_rate: 150      # מהירות דיבור (ערכים מומלצים בין 120-180)
-tts_volume: 1.0    # עוצמת קול (בין 0.0 ל-1.0)
-tts_voice_id: null # מזהה קול (null = ברירת מחדל)
+tts_rate: 150              # מהירות דיבור (ערכים מומלצים בין 120-180)
+tts_volume: 1.0            # עוצמת קול (בין 0.0 ל-1.0)
+tts_voice_id: null         # מזהה קול (null = ברירת מחדל)
 
-# === הגדרות זיהוי דיבור ===
-model_path: "models/vosk-model-en"  # נתיב למודל Vosk (יש להוריד מודל תואם)
-command_timeout: 10  # זמן המתנה לפקודה בשניות
+# === הגדרות זיהוי דיבור === 
+model_path: "models/vosk-model-he"  # נתיב למודל Vosk (יש להוריד מודל תואם)
 
-# === הגדרות תקשורת סיריאלית ===
-use_serial: false  # האם להשתמש בתקשורת סיריאלית
-serial_port: "/dev/ttyUSB0"  # פורט סיריאלי
-serial_baudrate: 115200       # קצב תקשורת
+# === הגדרות תקשורת סיריאלית === 
+use_serial: false           # האם להשתמש בתקשורת סיריאלית
+serial_port: "/dev/ttyUSB0" # פורט סיריאלי
+serial_baudrate: 115200     # קצב תקשורת
 
-# === הגדרות זיהוי פנים ===
-use_face_detection: false    # האם להשתמש בזיהוי פנים
-camera_index: 0              # אינדקס מצלמה
-face_detection_scale: 0.5    # גורם קנה מידה של תמונה לשיפור ביצועים
-show_video: false            # האם להציג וידאו בחלון
+# === הגדרות זיהוי פנים === 
+use_face_detection: true    # האם להשתמש בזיהוי פנים
+camera_index: 0             # אינדקס מצלמה
+face_detection_scale: 0.5   # גורם קנה מידה של תמונה לשיפור ביצועים
+show_video: true            # האם להציג וידאו בחלון
 greet_on_face_detection: true  # האם לברך כשמזוהות פנים
+
+# === מילונים מרובי שפות ===
+responses:
+  # תגובות למילת הפעלה
+  wake_responses:
+    he:
+      - "כן, איך אני יכול לעזור?"
+      - "אני כאן, במה אוכל לסייע לך?"
+      - "שומע אותך, מה תרצה?"
+      - "גונזו לשירותך, מה הבקשה שלך?"
+      - "הנה אני, איך אוכל לעזור היום?"
+    en:
+      - "Yes, how can I help you?"
+      - "I'm here, how can I assist you?"
+      - "I'm listening, what would you like?"
+      - "Gonzo at your service, what's your request?"
+      - "Here I am, how can I help today?"
+  
+  # תגובות לכישלון בזיהוי פקודה
+  command_not_understood:
+    he: "לא הבנתי את הפקודה, אנא נסה שוב."
+    en: "I didn't understand that command, please try again."
+  
+  # תגובות אחרות
+  system_ready:
+    he: "מערכת גונזו מוכנה. אמור 'גונזו' כדי להפעיל אותי."
+    en: "Gonzo AI system is ready. Say 'gonzo' to activate me."
+  
+  system_shutdown:
+    he: "מכבה את המערכת. להתראות!"
+    en: "Shutting down the system. Goodbye!"
+  
+  light_on:
+    he: "מדליק את האור."
+    en: "Turning on the light."
+  
+  light_off:
+    he: "מכבה את האור."
+    en: "Turning off the light."
+  
+  face_detected:
+    he: "שלום! זיהיתי אותך."
+    en: "Hello! I've detected you."
+
+  greetings:
+    he:
+      - "שלום לך!"
+      - "היי, נעים להכיר."
+      - "שלום, איך אני יכול לעזור?"
+      - "ברוך הבא, אני גונזו."
+    en:
+      - "Hello there!"
+      - "Hi, nice to meet you."
+      - "Hello, how can I help?"
+      - "Welcome, I'm Gonzo."
+  
+  introduction:
+    he: "שמי גונזו, אני מערכת בינה מלאכותית שנועדה לסייע לך. אני יכול להפעיל מכשירים, לזהות פנים, ולענות על שאלות."
+    en: "My name is Gonzo, I'm an AI system designed to assist you. I can control devices, detect faces, and answer questions."
