@@ -209,5 +209,69 @@ class GonzoSTT:
         if language_code in self.model_paths:
             self.language = language_code
             
-            # לשקול טעינה מחדש של המודל אם השפה השתנתה
-            # זה דורש אתחול מחדש של המזהים
+            # בשלב זה אנחנו רק משנים את השפה עבור התגובות
+            # לטעינה מחדש של מודל שפה נדרש לאתחל מחדש את המזהים
+            # זה עשוי לדרוש אתחול מחדש של המערכת
+            
+            print(f"Language changed to {language_code}")
+            return True
+        
+        print(f"Language {language_code} is not supported")
+        return False
+
+
+# מבחן למודול אם מריצים אותו ישירות
+if __name__ == "__main__":
+    # יצירת אובייקט עם הגדרות ברירת מחדל
+    stt = GonzoSTT()
+    
+    # הצגת התקני שמע זמינים
+    input_devices = stt.list_audio_devices()
+    
+    # בחירת התקן
+    if input_devices:
+        print("\nChoose microphone for wake word detection (default: 0):")
+        try:
+            device_index = int(input("Enter device index: ") or "0")
+            stt.device_index_listening = device_index
+            stt.device_index_command = device_index  # שימוש באותו מיקרופון לפשטות
+        except ValueError:
+            print("Invalid input, using default device 0")
+    
+    # בחירת שפה
+    print("\nChoose language (en/he):")
+    lang = input("Enter language code (default: en): ") or "en"
+    stt.set_language(lang)
+    
+    # הגדרת פונקציית קולבק
+    def on_wake(response):
+        print(f"\nWake word detected! Responding with: {response}")
+        print("Listening for command...")
+        command = stt.recognize_command()
+        if command:
+            print(f"Command received: {command}")
+            
+            # כאן אפשר להוסיף לוגיקה למה לעשות עם הפקודה
+            if "light" in command and "on" in command:
+                print("Action: Turning on the light")
+            elif "light" in command and "off" in command:
+                print("Action: Turning off the light")
+        else:
+            print("No command received or not understood")
+    
+    # הגדרת פונקציית הקולבק
+    stt.on_wake_word_detected = on_wake
+    
+    # התחלת האזנה
+    try:
+        print(f"\nStarting wake word detection. Say '{stt.wake_word}' to activate...")
+        stt.start_listening()
+        
+        # השארת התוכנית רצה
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping...")
+    finally:
+        stt.stop_listening()
+        print("Stopped")
