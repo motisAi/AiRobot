@@ -46,9 +46,8 @@ class RS485Motor:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.enable_pin, GPIO.OUT)
         
-        # Configure UART pins
-        GPIO.setup(self.tx_pin, GPIO.ALT0)  # Set GPIO14 as UART TX
-        GPIO.setup(self.rx_pin, GPIO.ALT0)  # Set GPIO15 as UART RX
+        # Note: GPIO14/15 are automatically configured as UART TX/RX
+        # when using /dev/ttyAMA0 - no manual setup needed
         
         # Setup Serial
         self.ser = serial.Serial(
