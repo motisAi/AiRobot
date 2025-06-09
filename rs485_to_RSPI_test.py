@@ -28,24 +28,31 @@ import serial
 import RPi.GPIO as GPIO
 
 class RS485Motor:
-    def __init__(self, enable_pin=18, port='/dev/serial0', baudrate=9600):
+    def __init__(self, enable_pin=18, tx_pin=14, rx_pin=15, baudrate=9600):
         """
         Initialize RS485 connection for motor controller.
         
         Args:
             enable_pin: GPIO pin for TX/RX control (default: 18)
-            port: Serial port (default: '/dev/serial0') 
+            tx_pin: GPIO pin for TX (default: 14)
+            rx_pin: GPIO pin for RX (default: 15)
             baudrate: Communication speed (default: 9600)
         """
         self.enable_pin = enable_pin
+        self.tx_pin = tx_pin
+        self.rx_pin = rx_pin
         
         # Setup GPIO
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.enable_pin, GPIO.OUT)
         
+        # Configure UART pins
+        GPIO.setup(self.tx_pin, GPIO.ALT0)  # Set GPIO14 as UART TX
+        GPIO.setup(self.rx_pin, GPIO.ALT0)  # Set GPIO15 as UART RX
+        
         # Setup Serial
         self.ser = serial.Serial(
-            port=port,
+            port='/dev/ttyAMA0',  # Use hardware UART
             baudrate=baudrate,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
@@ -55,15 +62,16 @@ class RS485Motor:
         
         # Start in receive mode
         self.receive_mode()
-        print(f"RS485 Motor Controller initialized on {port}")
+        print(f"RS485 Motor Controller initialized on /dev/ttyAMA0")
+        print(f"Using TX: GPIO{self.tx_pin}, RX: GPIO{self.rx_pin}, Enable: GPIO{self.enable_pin}")
     
     def transmit_mode(self):
         """Switch to transmit mode (send data)"""
-        GPIO.output(self.enable_pin, GPIO.HIGH)
+        GPIO.output(self.enable_pin, GPIO.HIGH)  # DE high for TX, RE high (disabled)
     
     def receive_mode(self):
         """Switch to receive mode (listen for data)"""
-        GPIO.output(self.enable_pin, GPIO.LOW)
+        GPIO.output(self.enable_pin, GPIO.LOW)   # DE low (disabled), RE low for RX
     
     def send_command(self, command):
         """
