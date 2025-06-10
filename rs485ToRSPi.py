@@ -160,7 +160,27 @@ class StepperController:
     def cleanup(self):
         self.ser.close()
         GPIO.cleanup()
+    def send_raw_packet(self, data: bytes):
+        crc = self.calc_crc(data)
+        packet = data + struct.pack('<H', crc)
+        GPIO.output(self.enable_pin, GPIO.HIGH)
+        time.sleep(0.001)
+        self.ser.write(packet)
+        self.ser.flush()
+        time.sleep(0.001)
+        GPIO.output(self.enable_pin, GPIO.LOW)
+        time.sleep(0.05)
 
+
+if __name__ == "__main__":
+    controller = StepperController(port="/dev/serial0", enable_pin=18)
+    try:
+        # Set controller address (example: 0x00 0x06 0x01 0x00 0x00 0x01 + CRC)
+        raw_data = bytes([0x00, 0x06, 0x01, 0x00, 0x00, 0x01])
+        controller.send_raw_packet(raw_data)
+    finally:
+        controller.cleanup()     
+"""
 if __name__ == "__main__":
     controller = StepperController(port="/dev/serial0", enable_pin=18)
     try:
@@ -175,3 +195,4 @@ if __name__ == "__main__":
         controller.send_command(1, 0x0000, 0)
     finally:
         controller.cleanup()    
+"""
