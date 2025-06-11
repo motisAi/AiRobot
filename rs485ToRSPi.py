@@ -170,7 +170,17 @@ class StepperController:
         time.sleep(0.001)
         GPIO.output(self.enable_pin, GPIO.LOW)
         time.sleep(0.05)
-
+    def write_register(self, device_id: int, register_address: int, value: int):
+        data = struct.pack('>BBHH', device_id, self.FUNCTION_CODE_WRITE, register_address, value)
+        crc = self.calc_crc(data)
+        packet = data + struct.pack('<H', crc)
+        print(packet)
+        GPIO.output(self.enable_pin, GPIO.HIGH)
+        time.sleep(0.001)
+        self.ser.write(packet)
+        self.ser.flush()
+        time.sleep(0.001)
+        GPIO.output(self.enable_pin, GPIO.LOW)
 
 if __name__ == "__main__":
     controller = StepperController(port="/dev/serial0", enable_pin=18)
