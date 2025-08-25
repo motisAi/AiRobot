@@ -1,25 +1,25 @@
-# קובץ config.yaml
+# קובץ config.yaml - גרסה מתוקנת
 # =================================== 
 # Gonzo AI - קובץ קונפיגורציה
 # =================================== 
 
 # === הגדרות כלליות === 
 system_name: "Gonzo"
-language: "he"  # he = עברית, en = אנגלית
+language: "en"  # en = אנגלית, he = עברית (שנה ל-en כי יש לך מודל אנגלי)
 wake_word: "gonzo"
 command_timeout: 10  # זמן המתנה לפקודה בשניות
 
 # === הגדרות שמע === 
 # אינדקסים של התקני שמע - 
 # הערך הנכון תלוי במערכת שלך, השתמש בפונקציה list_audio_devices() כדי למצוא
-device_index_listening: 0  # מיקרופון להאזנה למילת ההפעלה
-device_index_command: 0    # מיקרופון לפקודות (אפשר להשתמש באותו מיקרופון)
+device_index_listening: 2  # מיקרופון להאזנה למילת ההפעלה (USB PnP Sound Device)
+device_index_command: 2    # מיקרופון לפקודות (יכול להיות אותו מיקרופון)
 tts_rate: 150              # מהירות דיבור (ערכים מומלצים בין 120-180)
 tts_volume: 1.0            # עוצמת קול (בין 0.0 ל-1.0)
 tts_voice_id: null         # מזהה קול (null = ברירת מחדל)
 
 # === הגדרות זיהוי דיבור === 
-model_path: "models/vosk-model-he"  # נתיב למודל Vosk (יש להוריד מודל תואם)
+model_path: "models/vosk-model-small-en-us-0.15"  # הנתיב למודל האנגלי שלך
 
 # === הגדרות תקשורת סיריאלית === 
 use_serial: false           # האם להשתמש בתקשורת סיריאלית
@@ -27,11 +27,11 @@ serial_port: "/dev/ttyUSB0" # פורט סיריאלי
 serial_baudrate: 115200     # קצב תקשורת
 
 # === הגדרות זיהוי פנים === 
-use_face_detection: true    # האם להשתמש בזיהוי פנים
+use_face_detection: false   # כבה זיהוי פנים בינתיים לבדיקה
 camera_index: 0             # אינדקס מצלמה
 face_detection_scale: 0.5   # גורם קנה מידה של תמונה לשיפור ביצועים
-show_video: true            # האם להציג וידאו בחלון
-greet_on_face_detection: true  # האם לברך כשמזוהות פנים
+show_video: false           # האם להציג וידאו בחלון
+greet_on_face_detection: false  # האם לברך כשמזוהות פנים
 
 # === מילונים מרובי שפות ===
 responses:
