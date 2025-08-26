@@ -1,4 +1,3 @@
-# קובץ Main.py המעודכן עם תמיכה מרובת שפות וזיהוי פנים מלא
 import os
 import time
 import threading
@@ -88,8 +87,11 @@ class GonzoAI:
     
     def add_new_face_to_database(self, frame, name):
         """הוספת פנים חדשות למאגר"""
+        # המרה ל-RGB עבור face_recognition
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
         # איתור פנים בתמונה
-        face_locations = face_recognition.face_locations(frame)
+        face_locations = face_recognition.face_locations(rgb_frame)
         
         if not face_locations:
             return False, "No faces found in the image"
@@ -100,8 +102,8 @@ class GonzoAI:
             largest_face_idx = face_areas.index(max(face_areas))
             face_locations = [face_locations[largest_face_idx]]
         
-        # יצירת encoding לפנים
-        face_encodings = face_recognition.face_encodings(frame, face_locations)
+        # יצירת encoding לפנים - חשוב! השתמש ב-rgb_frame
+        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
         
         if not face_encodings:
             return False, "Failed to encode face"
@@ -128,7 +130,7 @@ class GonzoAI:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         face_img_path = os.path.join(self.faces_dir, f"{name}_{timestamp}.jpg")
         
-        # חילוץ אזור הפנים ושמירה
+        # חילוץ אזור הפנים ושמירה - השתמש בתמונה המקורית BGR
         (top, right, bottom, left) = face_locations[0]
         face_img = frame[top:bottom, left:right]
         cv2.imwrite(face_img_path, face_img)
@@ -143,20 +145,17 @@ class GonzoAI:
         if not self.known_face_encodings:
             return [], []
         
-        # איתור פנים בתמונה
-        #print("DEBUG: Entered identify_faces_in_frame")
-        #face_locations = face_recognition.face_locations(frame)
-        #print(f"DEBUG: Detected face_locations:")#, face_locations)
-        print("DEBUG: Entered identify_faces_in_frame")
+        # המרה ל-RGB עבור face_recognition
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # איתור פנים בתמונה
         face_locations = face_recognition.face_locations(rgb_frame)
-        print(f"DEBUG: Detected face_locations:", face_locations)
         
         if not face_locations:
             return [], []
         
-        # יצירת encodings לפנים שנמצאו
-        face_encodings = face_recognition.face_encodings(frame, face_locations)
+        # יצירת encodings לפנים שנמצאו - חשוב! השתמש ב-rgb_frame
+        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
         
         face_names = []
         for face_encoding in face_encodings:
@@ -313,31 +312,19 @@ class GonzoAI:
     
     def turn_light_on(self):
         """הדלקת אור"""
-        print("DEBUG: turn_light_on called")
         if self.serial:
-            print("DEBUG: sending serial command")
             self.serial.send_command("LIGHT_ON")
-        else:
-            print("DEBUG: no serial connection")
         
         response = self.get_response_text('light_on', "Turning on the light.")
-        print(f"DEBUG: TTS response: {response}")
         self.tts.speak(response)
-        print("DEBUG: turn_light_on completed")
     
     def turn_light_off(self):
         """כיבוי אור"""
-        print("DEBUG: turn_light_off called")
         if self.serial:
-            print("DEBUG: sending serial command")
             self.serial.send_command("LIGHT_OFF")
-        else:
-            print("DEBUG: no serial connection")
         
         response = self.get_response_text('light_off', "Turning off the light.")
-        print(f"DEBUG: TTS response: {response}")
         self.tts.speak(response)
-        print("DEBUG: turn_light_off completed")
     
     def say_hello(self):
         """אמירת שלום"""
@@ -364,6 +351,8 @@ class GonzoAI:
         current_time = time.time()
         
         for (top, right, bottom, left), name in zip(face_locations, face_names):
+            print(f"Processing face: {name} at location ({left}, {top}, {right}, {bottom})")
+            
             if name != "Unknown":
                 # אדם מוכר - בדיקה אם לא בירכנו לאחרונה
                 if name not in self.last_greeting_time or (current_time - self.last_greeting_time[name]) > self.greeting_interval:
@@ -378,11 +367,13 @@ class GonzoAI:
                     else:
                         greeting = f"Good night {name}, nice to see you again"
                     
+                    print(f"Greeting known person: {greeting}")
                     self.tts.speak(greeting)
                     self.last_greeting_time[name] = current_time
                     
             elif not self.asking_for_name:
                 # אדם לא מוכר - שאלה לשם
+                print("Unknown person detected - asking for name")
                 self.unknown_face_data = {
                     'location': (top, right, bottom, left),
                     'frame': frame.copy()
@@ -392,6 +383,7 @@ class GonzoAI:
                 self.tts.speak("I see a new face, what is your name please?")
                 
                 # שימוש במיקרופון B לקבלת תשובה
+                print("Waiting for name response...")
                 name_response = self.stt.listen_for_face_interaction()
                 
                 if name_response:
@@ -403,6 +395,8 @@ class GonzoAI:
                         name_response
                     )
                     
+                    print(f"Add face result: {success}, {message}")
+                    
                     if success:
                         self.tts.speak(f"Thank you {name_response}, I'll remember you")
                         # עדכון רשימת הפנים הידועות
@@ -410,11 +404,13 @@ class GonzoAI:
                     else:
                         self.tts.speak(message)
                 else:
+                    print("No name response received")
                     self.tts.speak("I didn't catch your name, but nice to meet you anyway")
                 
                 # איפוס משתני האינטראקציה
                 self.asking_for_name = False
                 self.unknown_face_data = None
+                print("Face interaction completed")
     
     def start(self):
         """התחלת פעולת המערכת"""
@@ -437,39 +433,31 @@ class GonzoAI:
                 # אם מודול זיהוי פנים פעיל, הפעל אותו
                 if self.face:
                     frame = self.face.get_frame()
-                    print("DEBUG: Captured frame from camera")
                     if frame is not None:
-                        print("DEBUG: face_locations:")
-                        print("DEBUG: face_names:")
-
                         # עיבוד כל התמונה השלישית כדי לחסוך במעבד
                         frame_count += 1
                         process_this_frame = (frame_count % 3 == 0)
                         
                         if process_this_frame and not self.asking_for_name:
-                            print("DEBUG: # זיהוי פנים בתמונה באמצעות face_recognition")
                             # זיהוי פנים בתמונה באמצעות face_recognition
                             face_locations, face_names = self.identify_faces_in_frame(frame)
                             
                             if face_locations:
-                                print("# עיבוד אינטראקציית זיהוי פנים")
                                 # עיבוד אינטראקציית זיהוי פנים
                                 self.process_face_interaction(frame, face_locations, face_names)
                             
-                            # ציור מסגרות סביב פנים (אם מוצג וידאו)
-                            if self.config.get('show_video', False):
-                                for (top, right, bottom, left), name in zip(face_locations, face_names):
-                                    print(f"DEBUG: Detected face: {name} at {(left, top, right, bottom)}")
-                                    # ציור מלבן סביב הפנים
-                                    cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-                                    print("DEBUG: Drew rectangle around face")
-                                    
-                                    # ציור מלבן מלא מתחת לפנים עבור השם
-                                    cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-                                    
-                                    # ציור הטקסט של השם
-                                    cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 
-                                               0.8, (255, 255, 255), 1)
+                        # ציור מסגרות סביב פנים (אם מוצג וידאו)
+                        if self.config.get('show_video', False) and face_locations:
+                            for (top, right, bottom, left), name in zip(face_locations, face_names):
+                                # ציור מלבן סביב הפנים
+                                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                                
+                                # ציור מלבן מלא מתחת לפנים עבור השם
+                                cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 255, 0), cv2.FILLED)
+                                
+                                # ציור הטקסט של השם
+                                cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 
+                                           0.8, (255, 255, 255), 1)
                         
                         # הצגת הוידאו אם מוגדר
                         if self.config.get('show_video', False):
