@@ -430,6 +430,8 @@ class GonzoAI:
         try:
             # לולאה ראשית
             while self.running:
+                face_locations = []
+                face_names = []
                 # אם מודול זיהוי פנים פעיל, הפעל אותו
                 if self.face:
                     frame = self.face.get_frame()
@@ -447,7 +449,7 @@ class GonzoAI:
                                 self.process_face_interaction(frame, face_locations, face_names)
                             
                         # ציור מסגרות סביב פנים (אם מוצג וידאו)
-                        if self.config.get('show_video', False) and face_locations:
+                        if self.config.get('show_video', False): #and face_locations:
                             for (top, right, bottom, left), name in zip(face_locations, face_names):
                                 # ציור מלבן סביב הפנים
                                 cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
