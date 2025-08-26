@@ -144,7 +144,13 @@ class GonzoAI:
             return [], []
         
         # איתור פנים בתמונה
-        face_locations = face_recognition.face_locations(frame)
+        #print("DEBUG: Entered identify_faces_in_frame")
+        #face_locations = face_recognition.face_locations(frame)
+        #print(f"DEBUG: Detected face_locations:")#, face_locations)
+        print("DEBUG: Entered identify_faces_in_frame")
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_frame)
+        print(f"DEBUG: Detected face_locations:", face_locations)
         
         if not face_locations:
             return [], []
@@ -431,24 +437,32 @@ class GonzoAI:
                 # אם מודול זיהוי פנים פעיל, הפעל אותו
                 if self.face:
                     frame = self.face.get_frame()
+                    print("DEBUG: Captured frame from camera")
                     if frame is not None:
+                        print("DEBUG: face_locations:")
+                        print("DEBUG: face_names:")
+
                         # עיבוד כל התמונה השלישית כדי לחסוך במעבד
                         frame_count += 1
                         process_this_frame = (frame_count % 3 == 0)
                         
                         if process_this_frame and not self.asking_for_name:
+                            print("DEBUG: # זיהוי פנים בתמונה באמצעות face_recognition")
                             # זיהוי פנים בתמונה באמצעות face_recognition
                             face_locations, face_names = self.identify_faces_in_frame(frame)
                             
                             if face_locations:
+                                print("# עיבוד אינטראקציית זיהוי פנים")
                                 # עיבוד אינטראקציית זיהוי פנים
                                 self.process_face_interaction(frame, face_locations, face_names)
                             
                             # ציור מסגרות סביב פנים (אם מוצג וידאו)
                             if self.config.get('show_video', False):
                                 for (top, right, bottom, left), name in zip(face_locations, face_names):
+                                    print(f"DEBUG: Detected face: {name} at {(left, top, right, bottom)}")
                                     # ציור מלבן סביב הפנים
                                     cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+                                    print("DEBUG: Drew rectangle around face")
                                     
                                     # ציור מלבן מלא מתחת לפנים עבור השם
                                     cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)

@@ -38,7 +38,7 @@ class GonzoSTT:
         
         # קונפיגורציה טכנית
         self.target_sample_rate = 16000
-        self.block_size = 8000
+        self.block_size = 1024#2048#4096#8000
         self.running = True
         self.is_listening = False
         self.command_mode = False
@@ -48,8 +48,8 @@ class GonzoSTT:
         self.pause_lock = threading.Lock()
         
         # Native sample rates
-        self.listening_native_rate = 48000
-        self.command_native_rate = 48000
+        self.listening_native_rate = 44100
+        self.command_native_rate = 44100
         
         # תורים לנתוני שמע
         self.listening_queue = queue.Queue()
@@ -384,3 +384,13 @@ class GonzoSTT:
         
         print(f"Language {language_code} is not supported")
         return False
+
+
+if __name__ == "__main__":
+    # דוגמה לשימוש במודול
+    stt = GonzoSTT()
+    
+    # הצגת התקני שמע
+    stt.list_audio_devices()
+    
+  
