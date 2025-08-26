@@ -1,4 +1,4 @@
-# מודול זיהוי דיבור מקומי עם Vosk - גרסה עם מנגנון pause/resume
+# מודול זיהוי דיבור מקומי עם Vosk - גרסה מתוקנת
 import os
 import json
 import queue
@@ -36,9 +36,9 @@ class GonzoSTT:
                 "he": "models/vosk-model-he"
             }
         
-        # קונפיגורציה טכנית
+        # קונפיגורציה טכנית - חזרה לבאפר קטן יותר
         self.target_sample_rate = 16000
-        self.block_size = 1024#2048#4096#8000
+        self.block_size = 1024  # חזרנו לגודל קטן יותר
         self.running = True
         self.is_listening = False
         self.command_mode = False
@@ -51,9 +51,9 @@ class GonzoSTT:
         self.listening_native_rate = 44100
         self.command_native_rate = 44100
         
-        # תורים לנתוני שמע
-        self.listening_queue = queue.Queue()
-        self.command_queue = queue.Queue()
+        # תורים לנתוני שמע - גודל קטן יותר
+        self.listening_queue = queue.Queue(maxsize=20)
+        self.command_queue = queue.Queue(maxsize=20)
         
         # בחירת מודל לפי שפה
         selected_model_path = self.model_paths.get(self.language, 
@@ -66,7 +66,7 @@ class GonzoSTT:
             print(f"Loaded Vosk model from {selected_model_path}")
         else:
             print(f"Warning: Model path {selected_model_path} not found.")
-            # נסיון fallback
+            # ניסיון fallback
             fallback_path = self.model_paths.get("en", "models/vosk-model-small-en-us-0.15")
             if os.path.exists(fallback_path):
                 self.model = Model(fallback_path)
@@ -131,7 +131,7 @@ class GonzoSTT:
                         device=device_index,
                         dtype='int16',
                         channels=1,
-                        blocksize=1024
+                        blocksize=self.block_size
                     ):
                         return rate
                 except:
@@ -170,7 +170,19 @@ class GonzoSTT:
             self.target_sample_rate
         )
         
-        self.listening_queue.put(resampled_data)
+        # אגרסיבי - רוקן תור אם הוא מתקרב למלא
+        while self.listening_queue.qsize() > 15:
+            try:
+                self.listening_queue.get_nowait()
+            except queue.Empty:
+                break
+        
+        # הוספה לתור עם בדיקת overflow
+        try:
+            self.listening_queue.put_nowait(resampled_data)
+        except queue.Full:
+            # אם מלא, דלג על הנתון הזה
+            pass
     
     def command_callback(self, indata, frames, time, status):
         """פונקציית קולבק להאזנה לפקודות"""
@@ -183,7 +195,19 @@ class GonzoSTT:
             self.target_sample_rate
         )
         
-        self.command_queue.put(resampled_data)
+        # אגרסיבי - רוקן תור אם הוא מתקרב למלא
+        while self.command_queue.qsize() > 15:
+            try:
+                self.command_queue.get_nowait()
+            except queue.Empty:
+                break
+        
+        # הוספה לתור עם בדיקת overflow
+        try:
+            self.command_queue.put_nowait(resampled_data)
+        except queue.Full:
+            # אם מלא, דלג על הנתון הזה
+            pass
     
     def pause_wake_word_listening(self):
         """השהיית האזנה למילת מפתח זמנית"""
@@ -204,7 +228,7 @@ class GonzoSTT:
             print("Wake word listening resumed")
     
     def listen_for_wake_word(self):
-        """האזנה רציפה למילת ההפעלה ב-thread נפרד עם מנגנון pause"""
+        """האזנה רצופה למילת ההפעלה ב-thread נפרד עם מנגנון pause"""
         try:
             with sd.RawInputStream(
                 samplerate=self.listening_native_rate,
@@ -279,7 +303,7 @@ class GonzoSTT:
                                 self.resume_wake_word_listening()
                                 return command_text
                     except queue.Empty:
-                        # טיימאאוט בתור - זה בסדר, ממשיכים
+                        # טיימאוט בתור - זה בסדר, ממשיכים
                         pass
                 
                 # אם הגענו לכאן, חלף זמן ההמתנה ללא פקודה
@@ -392,5 +416,3 @@ if __name__ == "__main__":
     
     # הצגת התקני שמע
     stt.list_audio_devices()
-    
-  
